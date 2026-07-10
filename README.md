@@ -18,13 +18,17 @@ on processor architectures:
 - [X] arm64
 - [X] armhf
 
+> **Deploying the classlab platform?** See [RUNBOOK.md](./RUNBOOK.md) for the full
+> end-to-end procedure (bare VMs → k3s → ArgoCD GitOps).
+
 ## System requirements
 
 The control node **must** have Ansible 8.0+ (ansible-core 2.15+)
 
 All managed nodes in inventory must have:
+
 - Passwordless SSH access
-- Root access (or a user with equivalent permissions) 
+- Root access (or a user with equivalent permissions)
 
 It is also recommended that all managed nodes disable firewalls and swap. See [K3s Requirements](https://docs.k3s.io/installation/requirements) for more information.
 
@@ -35,7 +39,7 @@ It is also recommended that all managed nodes disable firewalls and swap. See [K
 `k3s-ansible` is an Ansible collection and can be installed with the `ansible-galaxy` command:
 
 ```console
-$ ansible-galaxy collection install git+https://github.com/k3s-io/k3s-ansible.git
+ansible-galaxy collection install git+https://github.com/k3s-io/k3s-ansible.git
 ```
 
 Alternatively, add it to the [`requirements.yaml` file of your Ansible project](https://docs.ansible.com/ansible/latest/collections_guide/collections_installing.html#install-multiple-collections-with-a-requirements-file) as follows:
@@ -54,8 +58,8 @@ As a comit-ish, you can use a branch, a version tag, or a specific commit.
 Alternatively to an installation with `ansible-galaxy`, the `k3s-ansible` repository can simply be cloned from github:
 
 ```console
-$ git clone https://github.com/k3s-io/k3s-ansible.git
-$ cd k3s-ansible
+git clone https://github.com/k3s-io/k3s-ansible.git
+cd k3s-ansible
 ```
 
 ## Usage
@@ -69,6 +73,7 @@ cp inventory-sample.yml inventory.yml
 If you have installed `k3s-ansible` with ansible-galaxy, you can grab the [inventory-sample.yml](./inventory-sample.yml) from github.
 
 Second edit the inventory file to match your cluster setup. For example:
+
 ```bash
 k3s_cluster:
   children:
@@ -88,16 +93,15 @@ An odd number of server nodes is required (3,5,7). Read the [official documentat
 
 Setting up a loadbalancer or VIP beforehand to use as the API endpoint is possible but not covered here.
 
-
 Start provisioning of the cluster using one of the following commands. The command to be used depends on whether you installed `k3s-ansible` with `ansible-galaxy` or if you run the playbook from within the cloned git repository:
 
-*Installed with ansible-galaxy*
+Installed with ansible-galaxy:
 
 ```bash
 ansible-playbook k3s.orchestration.site -i inventory.yml
 ```
 
-*Running the playbook from inside the repository*
+Running the playbook from inside the repository:
 
 ```bash
 ansible-playbook playbooks/site.yml -i inventory.yml
@@ -105,20 +109,19 @@ ansible-playbook playbooks/site.yml -i inventory.yml
 
 Alternatively, to run the playbook from your existing project setup, run the playbook from within your own playbook:
 
-*Installed with ansible-galaxy*
+Installed with ansible-galaxy:
 
 ```yaml
 - name: Import kube cluster playbook
   ansible.builtin.import_playbook: k3s.orchestration.site
 ```
 
-*Running the playbook from inside the repository*
+Running the playbook from inside the repository:
 
 ```yaml
 - name: Import kube cluster playbook
   ansible.builtin.import_playbook: k3s-ansible/playbooks/site.yml
 ```
-
 
 ### Using an external database
 
@@ -148,14 +151,13 @@ The format of the datastore-endpoint parameter is dependent upon the datastore b
 
 A playbook is provided to upgrade K3s on all nodes in the cluster. To use it, update `k3s_version` with the desired version in `inventory.yml` and run one of the following commands. Again, the syntax is slightly different depending on whether you installed `k3s-ansible` with `ansible-galaxy` or if you run the playbook from within the cloned git repository:
 
-
-*Installed with ansible-galaxy*
+Installed with ansible-galaxy:
 
 ```bash
 ansible-playbook k3s.orchestration.upgrade -i inventory.yml
 ```
 
-*Running the playbook from inside the repository*
+Running the playbook from inside the repository:
 
 ```bash
 ansible-playbook playbooks/upgrade.yml -i inventory.yml
@@ -166,6 +168,7 @@ ansible-playbook playbooks/upgrade.yml -i inventory.yml
 Airgap installation is supported via the `airgap_dir` variable. This variable should be set to the path of a directory containing the K3s binary and images. The release artifacts can be downloaded from the [K3s Releases](https://github.com/k3s-io/k3s/releases). You must download the appropriate images for you architecture (any of the compression formats will work). Additionally, you must run the `airgap` role to set up the airgapped environment.
 
 An example folder for an x86_64 cluster:
+
 ```bash
 $ ls ./playbooks/my-airgap/
 total 248M
@@ -179,12 +182,11 @@ airgap_dir: ./my-airgap # Paths are relative to the playbooks directory
 
 Additionally, if deploying on an OS with SELinux, you will also need to download the latest [k3s-selinux RPM](https://github.com/k3s-io/k3s-selinux/releases/latest) and its dependencies `selinux-policy` and `container-selinux` RPMs and place them in the airgap folder.
 
-
-It is assumed that the control node has access to the internet. The playbook will automatically download the k3s install script on the control node, and then distribute all three artifacts to the managed nodes. 
+It is assumed that the control node has access to the internet. The playbook will automatically download the k3s install script on the control node, and then distribute all three artifacts to the managed nodes.
 
 ## Kubeconfig
 
-After successful bringup, the kubeconfig of the cluster is copied to the control node  and merged with `~/.kube/config` under the `k3s-ansible` context unless overwritten by the `cluster_context` variable.
+After successful bringup, the kubeconfig of the cluster is copied to the control node and merged with `~/.kube/config` under the `k3s-ansible` context unless overwritten by the `cluster_context` variable.
 Assuming you have [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) installed, you can confirm access to your **Kubernetes** cluster with the following:
 
 ```bash
@@ -196,17 +198,43 @@ If you wish for your kubeconfig to be copied elsewhere and not merged, you can s
 
 If you wish to get a new copy of the kubeconfig after installation you can run the site playbook again using the `kubeconfig` tag.
 
-*Installed with ansible-galaxy*
+Installed with ansible-galaxy:
 
 ```bash
 ansible-playbook k3s.orchestration.site -i inventory.yml --tags kubeconfig
 ```
 
-*Running the playbook from inside the repository*
+Running the playbook from inside the repository:
 
 ```bash
 ansible-playbook playbooks/site.yml -i inventory.yml --tags kubeconfig
 ```
+
+## Deploy classlab-infra (ArgoCD GitOps)
+
+After the cluster is up (`site.yml`), you can bootstrap the platform layer from
+[`classlab-infra`](https://github.com/mateplo/classlab-infra) (ArgoCD + the
+`infrastructure` ApplicationSet). This runs **on the first server node**, which
+already has `kubectl` and the local kubeconfig: it clones the repo and replays
+its idempotent `bootstrap.sh` (installs the ArgoCD CRDs, waits for them to be
+`Established`, then applies the root Applications). After that ArgoCD reconciles
+everything from Git.
+
+```bash
+ansible-playbook playbooks/classlab-infra.yml -i inventory.yml
+```
+
+A yes/no prompt is shown at start. To run non-interactively (CI), skip it:
+
+```bash
+ansible-playbook playbooks/classlab-infra.yml -i inventory.yml -e classlab_infra_deploy=yes
+```
+
+Optional overrides (see `inventory-sample.yml`): `classlab_infra_repo`,
+`classlab_infra_version`, `classlab_infra_dest`, `classlab_infra_kubeconfig`.
+
+See [RUNBOOK.md](./RUNBOOK.md) for the complete zero-to-GitOps procedure.
+
 ## Local Testing
 
 A Vagrantfile is provided that provision a 5 nodes cluster using Vagrant (LibVirt or Virtualbox as provider). To use it:
@@ -220,6 +248,7 @@ By default, each node is given 2 cores and 2GB of RAM and runs Ubuntu 24.04. You
 ## Need More Features?
 
 This project is intended to provide a "vanilla" K3s install. If you need more features, such as:
+
 - Private Registry
 - Advanced Storage (Longhorn, Ceph, etc)
 - External Database
@@ -227,8 +256,9 @@ This project is intended to provide a "vanilla" K3s install. If you need more fe
 - Alternative CNIs
 
 See these other projects:
-- https://github.com/PyratLabs/ansible-role-k3s
-- https://github.com/techno-tim/k3s-ansible
-- https://github.com/jon-stumpf/k3s-ansible
-- https://github.com/alexellis/k3sup
-- https://github.com/axivo/k3s-cluster
+
+- <https://github.com/PyratLabs/ansible-role-k3s>
+- <https://github.com/techno-tim/k3s-ansible>
+- <https://github.com/jon-stumpf/k3s-ansible>
+- <https://github.com/alexellis/k3sup>
+- <https://github.com/axivo/k3s-cluster>

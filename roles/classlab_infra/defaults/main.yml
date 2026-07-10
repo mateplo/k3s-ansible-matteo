@@ -1,0 +1,12 @@
+---
+# Dépôt GitOps de la couche plateforme (ArgoCD + ApplicationSet infrastructure).
+# ArgoCD lit lui-même depuis ce repo GitHub : on le clone sur le nœud pour
+# pouvoir lancer son bootstrap.sh (kustomize build + server-side apply + attente
+# des CRD), ce que l'auto-deploy natif de k3s (extra_manifests) ne sait pas faire.
+classlab_infra_repo: "https://github.com/mateplo/classlab-infra.git"  # noqa var-naming[no-role-prefix]
+classlab_infra_version: "main"  # branche, tag ou commit
+classlab_infra_dest: "/opt/classlab-infra"  # où cloner sur le nœud server
+
+# Kubeconfig local au nœud server (k3s l'écrit ici par défaut). Le bootstrap
+# tourne sur le nœud lui-même, donc l'endpoint 127.0.0.1:6443 est accessible.
+classlab_infra_kubeconfig: "/etc/rancher/k3s/k3s.yaml"

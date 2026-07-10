@@ -1,0 +1,47 @@
+---
+# Tout tourne une seule fois, sur le premier nœud server : il a kubectl (symlink
+# posé par l'install k3s) et le kubeconfig en local. On rejoue le bootstrap.sh
+# idempotent de classlab-infra plutôt que d'en réimplémenter la logique d'ordre.
+- name: Bootstrap classlab-infra (ArgoCD GitOps)
+  run_once: true
+  block:
+    - name: Installer git (requis pour cloner le repo)
+      ansible.builtin.package:
+        name: git
+        state: present
+
+    - name: Cloner / mettre à jour classlab-infra
+      ansible.builtin.git:
+        repo: "{{ classlab_infra_repo }}"
+        dest: "{{ classlab_infra_dest }}"
+        version: "{{ classlab_infra_version }}"
+        force: true
+      register: classlab_infra_checkout
+
+    - name: Vérifier que le kubeconfig k3s est présent
+      ansible.builtin.stat:
+        path: "{{ classlab_infra_kubeconfig }}"
+      register: classlab_infra_kubeconfig_stat
+
+    - name: Échouer tôt si le cluster n'est pas prêt
+      ansible.builtin.assert:
+        that: classlab_infra_kubeconfig_stat.stat.exists
+        fail_msg: >-
+          {{ classlab_infra_kubeconfig }} introuvable : installe d'abord le
+          cluster (playbooks/site.yml) avant de bootstrapper classlab-infra.
+
+    # bootstrap.sh encode la seule contrainte d'ordre : installer les CRD ArgoCD
+    # (Application/ApplicationSet) puis attendre 'Established' avant d'appliquer
+    # les root-apps. Idempotent → re-jouable sans effet de bord.
+    - name: Lancer le bootstrap ArgoCD
+      ansible.builtin.command:
+        cmd: bash bootstrap.sh
+        chdir: "{{ classlab_infra_dest }}"
+      environment:
+        KUBECONFIG: "{{ classlab_infra_kubeconfig }}"
+      register: classlab_infra_bootstrap
+      changed_when: true  # le script est idempotent mais 'command' ne le détecte pas
+
+    - name: Afficher la sortie du bootstrap
+      ansible.builtin.debug:
+        var: classlab_infra_bootstrap.stdout_lines

@@ -1,0 +1,21 @@
+---
+# Déploie la couche plateforme GitOps (classlab-infra : ArgoCD + ApplicationSet
+# infrastructure) sur un cluster k3s déjà provisionné par site.yml.
+#
+# Lancement :
+#   ansible-playbook playbooks/classlab-infra.yml -i inventory.yml
+# Une question oui/non est posée au démarrage. Pour automatiser (CI, non-interactif),
+# court-circuiter le prompt en passant la variable :
+#   ansible-playbook playbooks/classlab-infra.yml -i inventory.yml -e classlab_infra_deploy=yes
+- name: Bootstrap classlab-infra GitOps (ArgoCD)
+  hosts: server
+  gather_facts: false
+  become: true
+  vars_prompt:
+    - name: classlab_infra_deploy
+      prompt: "Déployer classlab-infra (ArgoCD + GitOps) sur ce cluster ? [yes/no]"
+      default: "no"
+      private: false
+  roles:
+    - role: classlab_infra
+      when: classlab_infra_deploy | bool
